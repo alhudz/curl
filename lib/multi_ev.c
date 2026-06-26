@@ -434,10 +434,14 @@ static CURLMcode mev_pollset_diff(struct Curl_multi *multi,
                                     prev_ps->actions[i], 0);
       if(mresult)
         return mresult;
-      CURL_TRC_M(data, "ev entry fd=%" FMT_SOCKET_T ", removed transfer, "
-                 "total=%u/%d (xfer/conn)", s,
-                 Curl_uint32_spbset_count(&entry->xfers),
-                 entry->conn ? 1 : 0);
+      /* curl_easy_pause() is documented as callable from any callback; it
+       * re-enters mev_assess() which may free this 'entry'. Re-fetch. */
+      entry = mev_sh_entry_get(&multi->ev.sh_entries, s);
+      if(entry)
+        CURL_TRC_M(data, "ev entry fd=%" FMT_SOCKET_T ", removed transfer, "
+                   "total=%u/%d (xfer/conn)", s,
+                   Curl_uint32_spbset_count(&entry->xfers),
+                   entry->conn ? 1 : 0);
     }
     else {
       mresult = mev_forget_socket(multi, data, s, "last user gone");
