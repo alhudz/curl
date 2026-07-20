@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<testcase>
+<info>
+<keywords>
+CURLOPT_URL
+CURLOPT_USERAGENT
+CURLOPT_REFERER
+CRLF
+</keywords>
+</info>
+
+# Server-side
+<reply>
+</reply>
+
+# Client-side
+<client>
+<name>
+setopt rejects CR and LF in string options
+</name>
+<tool>
+lib%TESTNUMBER
+</tool>
+</client>
+
+<verify>
+<stdout>
+0 failures
+</stdout>
+</verify>
+</testcase>

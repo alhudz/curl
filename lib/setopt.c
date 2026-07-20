@@ -90,6 +90,11 @@ CURLcode Curl_setstropt(char **charp, const char *s)
     if(strlen(s) > CURL_MAX_INPUT_LENGTH)
       return CURLE_BAD_FUNCTION_ARGUMENT;
 
+    if(s[strcspn(s, "\r\n")])
+      /* a CR or LF in a string option ends up injecting an extra line into
+         the request or command the value is later used in */
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+
     *charp = curlx_strdup(s);
     if(!*charp)
       return CURLE_OUT_OF_MEMORY;
@@ -1814,8 +1819,20 @@ static CURLcode setopt_copypostfields(const char *ptr, struct UserDefined *s)
   CURLcode result = CURLE_OK;
   if(s->postfieldsize < -1)
     return CURLE_BAD_FUNCTION_ARGUMENT;
-  if(!ptr || s->postfieldsize == -1)
-    result = Curl_setstropt(&s->str[STRING_COPYPOSTFIELDS], ptr);
+  if(!ptr || s->postfieldsize == -1) {
+    /* a POST body may legitimately hold CR/LF, so copy it here instead of
+       via Curl_setstropt() which rejects those */
+    curlx_safefree(s->str[STRING_COPYPOSTFIELDS]);
+    if(ptr) {
+      if(strlen(ptr) > CURL_MAX_INPUT_LENGTH)
+        result = CURLE_BAD_FUNCTION_ARGUMENT;
+      else {
+        s->str[STRING_COPYPOSTFIELDS] = curlx_strdup(ptr);
+        if(!s->str[STRING_COPYPOSTFIELDS])
+          result = CURLE_OUT_OF_MEMORY;
+      }
+    }
+  }
   else {
     size_t pflen = curlx_sotouz_range(s->postfieldsize, 0, SIZE_MAX);
     if(pflen == SIZE_MAX)
